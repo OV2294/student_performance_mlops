@@ -152,7 +152,7 @@ so Jenkins regenerates them with `dvc repro`.
 
 **Optional — DVC remote storage (data versioning proof for viva):**
 ```bat
-mkdir C:\dvc_storage
+mkdir data\dvc_storage
 dvc remote add -d localstore C:\dvc_storage
 dvc push
 git add .dvc\config
