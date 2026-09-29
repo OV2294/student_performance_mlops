@@ -1,24 +1,22 @@
-// Windows Jenkins pipeline: every step uses `bat` (cmd.exe) — no sh/Linux.
 pipeline {
     agent any
 
     options {
         timestamps()
-        timeout(time: 40, unit: 'MINUTES')
+        timeout(time: 30, unit: 'MINUTES')
         buildDiscarder(logRotator(numToKeepStr: '15'))
         disableConcurrentBuilds()
     }
 
     // ---- Workflow scheduling ----
     triggers {
-        cron('H 2 * * *')            // nightly retrain at ~02:00 (scheduled workflow)
-        pollSCM('H/5 * * * *')       // and on every new commit pushed to GitHub (CI)
+        // cron('H 2 * * *')            // nightly retrain at ~02:00
+        pollSCM('H/5 * * * *')       // build within ~5 min of every push to GitHub
     }
 
     environment {
-        PYTHONUTF8    = '1'
-        IMAGE_NAME    = 'student-performance-mlops'
-        PATH          = "${WORKSPACE}\\.venv\\Scripts;${env.PATH}"   // so `dvc repro` finds the .venv's python
+        PYTHONUTF8 = '1'
+        PATH       = "${WORKSPACE}\\.venv\\Scripts;${env.PATH}"   // lets `dvc repro` find the venv's python
     }
 
     stages {
@@ -36,14 +34,8 @@ pipeline {
             }
         }
 
-        stage('Unit tests') {
-            steps {
-                bat 'if not exist reports mkdir reports'
-                bat '.venv\\Scripts\\python -m pytest tests --junitxml=reports\\junit.xml -q'
-            }
-        }
-
-        stage('Data + Train pipeline (DVC)') {
+        stage('DVC pipeline') {
+            // generate_data -> preprocess -> train (MLflow) -> evaluate (quality gate) -> monitor (drift)
             steps {
                 bat '''
                 if not exist .dvc .venv\\Scripts\\dvc init
@@ -53,44 +45,31 @@ pipeline {
             }
         }
 
-        stage('Quality gate & tests (with model)') {
-            steps {
-                bat '.venv\\Scripts\\python -m pytest tests --junitxml=reports\\junit.xml -q'
-            }
-        }
-
-        stage('Drift monitoring') {
-            steps { bat '.venv\\Scripts\\python -m src.monitor' }
-        }
-
-        stage('Docker build') {
+        stage('Show metrics') {
             steps {
                 bat '''
-                docker build -t %IMAGE_NAME%:%BUILD_NUMBER% -t %IMAGE_NAME%:latest .
+                .venv\\Scripts\\dvc metrics show
+                type reports\\drift_report.json
                 '''
             }
         }
 
-        stage('Deploy (docker compose)') {
+        stage('Tests') {
             steps {
                 bat '''
-                docker compose down
-                docker compose up -d
+                if not exist reports mkdir reports
+                .venv\\Scripts\\python -m pytest tests --junitxml=reports\\junit.xml -q
                 '''
             }
-        }
-
-        stage('Smoke test') {
-            steps { bat '.venv\\Scripts\\python scripts\\smoke_test.py http://localhost:8000' }
         }
     }
 
     post {
         always {
             junit allowEmptyResults: true, testResults: 'reports/junit.xml'
-            archiveArtifacts artifacts: 'reports/*.json, models/model.joblib', allowEmptyArchive: true
+            archiveArtifacts artifacts: 'reports/*.json, models/model.joblib, dvc.lock', allowEmptyArchive: true
         }
-        success { echo 'Pipeline SUCCESS - model retrained, containerised and deployed.' }
-        failure { echo 'Pipeline FAILED - check the stage logs above.' }
+        success { echo 'SUCCESS - data prepared, models trained and tracked in MLflow, quality gate and drift check done.' }
+        failure { echo 'FAILED - check the stage logs above.' }
     }
 }
