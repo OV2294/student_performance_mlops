@@ -1,0 +1,117 @@
+schema: '2.0'
+stages:
+  generate_data:
+    cmd: python -m src.generate_data
+    deps:
+    - path: src/generate_data.py
+      hash: md5
+      md5: 8be7bcab655923b7dd3604a5bfa34c45
+      size: 2561
+    params:
+      params.yaml:
+        data:
+          n_samples: 3000
+          seed: 42
+          raw_path: data/raw/students.csv
+          processed_dir: data/processed
+    outs:
+    - path: data/raw/students.csv
+      hash: md5
+      md5: 3729756bc8f03718640d8a58c17419f9
+      size: 215744
+  preprocess:
+    cmd: python -m src.preprocess
+    deps:
+    - path: data/raw/students.csv
+      hash: md5
+      md5: 3729756bc8f03718640d8a58c17419f9
+      size: 215744
+    - path: src/preprocess.py
+      hash: md5
+      md5: f523f107d3dbb2a6e615dad11e680f27
+      size: 1132
+    params:
+      params.yaml:
+        split:
+          test_size: 0.2
+          random_state: 42
+    outs:
+    - path: data/processed
+      hash: md5
+      md5: b1c8c17e6ebf990b70007e26628b8af0.dir
+      size: 270537
+      nfiles: 3
+  train:
+    cmd: python -m src.train
+    deps:
+    - path: data/processed
+      hash: md5
+      md5: b1c8c17e6ebf990b70007e26628b8af0.dir
+      size: 270537
+      nfiles: 3
+    - path: src/pipeline.py
+      hash: md5
+      md5: af8bdd449ad759c5974b42a006958f90
+      size: 1185
+    - path: src/train.py
+      hash: md5
+      md5: 076cc7ff0be9dcd60c7bc212a56875a2
+      size: 3328
+    params:
+      params.yaml:
+        train:
+          experiment_name: student-performance
+          registered_model_name: student-performance-model
+          select_metric: f1
+          candidates:
+            logistic_regression:
+              C: 1.0
+              max_iter: 1000
+            random_forest:
+              n_estimators: 200
+              max_depth: 8
+              min_samples_leaf: 3
+            gradient_boosting:
+              n_estimators: 150
+              learning_rate: 0.08
+              max_depth: 3
+    outs:
+    - path: models/model.joblib
+      hash: md5
+      md5: b9dc7afc2163fb897b9684fd2c024811
+      size: 5754
+    - path: reports/metrics.json
+      hash: md5
+      md5: 408db2190fbba72e6b7b084fda2ab7fa
+      size: 289
+  evaluate:
+    cmd: python -m src.evaluate
+    deps:
+    - path: reports/metrics.json
+      hash: md5
+      md5: 408db2190fbba72e6b7b084fda2ab7fa
+      size: 289
+    - path: src/evaluate.py
+      hash: md5
+      md5: b7c0764fcf4dee5877dc219a74c5cf5a
+      size: 519
+  monitor:
+    cmd: python -m src.monitor
+    deps:
+    - path: data/processed/reference.csv
+      hash: md5
+      md5: a85f066b3e98c3d3c2ce54c61b26a893
+      size: 83513
+    - path: src/monitor.py
+      hash: md5
+      md5: 4968c5fdb85764f39e0f526eb89b93d7
+      size: 2059
+    params:
+      params.yaml:
+        monitor:
+          psi_threshold: 0.2
+    outs:
+    - path: reports/drift_report.json
+      hash: md5
+      md5: 2d3c02a1792c6eb195034d760e75fb65
+      size: 423

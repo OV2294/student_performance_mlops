@@ -1,0 +1,9 @@
+.venv/
+.git/
+__pycache__/
+mlruns/
+mlflow.db
+data/
+tests/
+.dvc/
+Jenkinsfile

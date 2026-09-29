@@ -1,0 +1,29 @@
+services:
+  api:
+    build: .
+    image: student-performance-mlops:latest
+    container_name: sp-api
+    ports: ["8000:8000"]
+    volumes:
+      - ./logs:/app/logs
+    restart: unless-stopped
+
+  dashboard:
+    image: student-performance-mlops:latest
+    container_name: sp-dashboard
+    command: ["streamlit", "run", "app.py", "--server.port=8501", "--server.address=0.0.0.0"]
+    ports: ["8501:8501"]
+    volumes:
+      - ./logs:/app/logs
+    depends_on: [api]
+    restart: unless-stopped
+
+  mlflow:
+    image: student-performance-mlops:latest
+    container_name: sp-mlflow
+    command: ["mlflow", "ui", "--host", "0.0.0.0", "--port", "5000", "--backend-store-uri", "sqlite:///mlflow.db"]
+    ports: ["5000:5000"]
+    volumes:
+      - ./mlflow.db:/app/mlflow.db
+    depends_on: [api]
+    restart: unless-stopped

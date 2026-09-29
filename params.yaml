@@ -1,0 +1,29 @@
+data:
+  n_samples: 3000
+  seed: 42
+  raw_path: data/raw/students.csv
+  processed_dir: data/processed
+
+split:
+  test_size: 0.2
+  random_state: 42
+
+train:
+  experiment_name: student-performance
+  registered_model_name: student-performance-model
+  select_metric: f1          # metric used to pick the champion model
+  candidates:
+    logistic_regression:
+      C: 1.0
+      max_iter: 1000
+    random_forest:
+      n_estimators: 200
+      max_depth: 8
+      min_samples_leaf: 3
+    gradient_boosting:
+      n_estimators: 150
+      learning_rate: 0.08
+      max_depth: 3
+
+monitor:
+  psi_threshold: 0.2         # PSI > 0.2 => significant drift
