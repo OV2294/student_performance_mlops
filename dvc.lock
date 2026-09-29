@@ -78,18 +78,18 @@ stages:
     outs:
     - path: models/model.joblib
       hash: md5
-      md5: b9dc7afc2163fb897b9684fd2c024811
+      md5: a84ce2ad6d8da7f67717fdae877639c9
       size: 5754
     - path: reports/metrics.json
       hash: md5
-      md5: 408db2190fbba72e6b7b084fda2ab7fa
+      md5: 0054113fb7f230b35dc2ba67f7d60e34
       size: 289
   evaluate:
     cmd: python -m src.evaluate
     deps:
     - path: reports/metrics.json
       hash: md5
-      md5: 408db2190fbba72e6b7b084fda2ab7fa
+      md5: 0054113fb7f230b35dc2ba67f7d60e34
       size: 289
     - path: src/evaluate.py
       hash: md5

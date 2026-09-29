@@ -13,3 +13,4 @@ requests
 dvc
 pytest
 httpx
+httpx2
