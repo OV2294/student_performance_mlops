@@ -17,7 +17,7 @@ train:
       C: 1.0
       max_iter: 1000
     random_forest:
-      n_estimators: 250
+      n_estimators: 200
       max_depth: 8
       min_samples_leaf: 3
     gradient_boosting:

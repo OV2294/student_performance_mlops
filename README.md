@@ -33,36 +33,6 @@ git init
 dvc init
 dvc cache dir --local C:\dvc_cache
 dvc repro
-```
-*(PowerShell blocks activation? run once: `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned`)*
-
-* `dvc cache dir --local C:\dvc_cache` keeps DVC's cache path short, so `dvc repro` works even if the project is
-  inside a deep/long Desktop folder (Windows 260-character limit).
-* Or do all of it in one go: `scripts\first_run.bat`
-* Result: `reports\metrics.json`, `models\model.joblib`, `mlflow.db`, `dvc.lock`.
-* Then: `streamlit run app.py`  •  `mlflow ui --backend-store-uri sqlite:///mlflow.db`  •  `uvicorn src.api:app --port 8000`
-
----
-## STEP 0 — Install prerequisites (once)
-
-Open **cmd as Administrator** and use winget (built into Windows 10/11):
-```bat
-winget install -e --id Python.Python.3.11 --scope machine
-winget install -e --id Git.Git
-winget install -e --id Docker.DockerDesktop
-winget install -e --id EclipseAdoptium.Temurin.17.JDK
-winget install -e --id Jenkins.Jenkins
-```
-* Restart the PC after Docker Desktop (it enables WSL2). Start Docker Desktop and wait for "Engine running".
-* If `winget install Jenkins.Jenkins` is unavailable, download the **Windows .msi** from https://www.jenkins.io/download/.
-* Python must be installed **for all users** (`--scope machine` above, or tick "Install for all users" + "Add to PATH"
-  in the installer) so the Jenkins service can find it.
-
-Open a **new** cmd window and verify:
-```bat
-cd student-performance-mlops
-scripts\check_prereqs.bat
-```
 
 ---
 ## STEP 1 — Run the project locally
@@ -153,7 +123,7 @@ so Jenkins regenerates them with `dvc repro`.
 **Optional — DVC remote storage (data versioning proof for viva):**
 ```bat
 mkdir data\dvc_storage
-dvc remote add -d localstore C:\dvc_storage
+dvc remote add -d localstore data\dvc_storage
 dvc push
 git add .dvc\config
 git commit -m "Add DVC remote"
@@ -178,35 +148,7 @@ Stop everything: `docker compose down`
 ---
 ## STEP 4 — Jenkins CI/CD on Windows
 
-### 4.1 Make Jenkins run as YOUR Windows user (needed for Docker Desktop)
-Jenkins installs as a service running as *Local System*, which cannot talk to Docker Desktop. Change it:
-
-*GUI:* press `Win+R` → `services.msc` → **Jenkins** → Properties → **Log On** → *This account* → enter your
-Windows username (`.\yourname`) and password → OK.
-
-*or cmd (Administrator):*
-```bat
-sc config Jenkins obj= ".\yourname" password= "your-windows-password"
-```
-Restart the service (cmd as Administrator):
-```bat
-net stop Jenkins
-net start Jenkins
-sc query Jenkins
-```
-(Windows accounts without a password can't be used for services — set a password for your Windows user first.)
-
-### 4.2 First-time setup
-```bat
-type C:\ProgramData\Jenkins\.jenkins\secrets\initialAdminPassword
-```
-Open http://localhost:8080 → paste the password → **Install suggested plugins** → create admin user → Save.
-(If port 8080 is busy, change it in `C:\Program Files\Jenkins\jenkins.xml` → `--httpPort=` → restart service.)
-
-Check the plugins **Git**, **Pipeline**, **JUnit** are installed (Manage Jenkins → Plugins → Installed) — the
-suggested set includes them.
-
-### 4.3 Create the pipeline job
+### Create the pipeline job
 1. Dashboard → **New Item** → name `student-performance-mlops` → **Pipeline** → OK.
 2. **Build Triggers**: leave empty — the schedule is already inside the `Jenkinsfile`
    (it is applied after the first build).
@@ -221,7 +163,7 @@ suggested set includes them.
 
 Watch it: click the build number (#1) → **Console Output**. First build takes ~10 min (installs packages, builds image).
 
-### 4.4 What the pipeline does (Jenkinsfile)
+### What the pipeline does (Jenkinsfile)
 | Stage | Windows command run |
 |---|---|
 | Checkout | `checkout scm` |
@@ -230,9 +172,6 @@ Watch it: click the build number (#1) → **Console Output**. First build takes 
 | Data + Train (DVC) | `dvc init` (if needed) + `dvc repro --force` |
 | Quality gate & tests | pytest again, now with the trained model |
 | Drift monitoring | `python -m src.monitor` |
-| Docker build | `docker build -t student-performance-mlops:<build#> .` |
-| Deploy | `docker compose down` + `docker compose up -d` |
-| Smoke test | `python scripts\smoke_test.py http://localhost:8000` |
 
 ### 4.5 Scheduling / automation (already in the Jenkinsfile)
 ```groovy
