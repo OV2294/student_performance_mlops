@@ -4,12 +4,19 @@ import joblib
 import mlflow
 import mlflow.sklearn
 import pandas as pd
+import warnings
+import logging
 from mlflow.models import infer_signature
 from sklearn.metrics import accuracy_score, f1_score, precision_score, recall_score, roc_auc_score
 from sklearn.model_selection import cross_val_score
 
 from src.config import ROOT, load_params, TARGET, MODEL_PATH, METRICS_PATH, TRACKING_URI
 from src.pipeline import build_pipeline
+
+warnings.filterwarnings("ignore", category=UserWarning)
+
+logging.getLogger("mlflow.sklearn").setLevel(logging.ERROR)
+logging.getLogger("mlflow.tracking._model_registry").setLevel(logging.ERROR)
 
 
 def score(pipe, X, y) -> dict:
