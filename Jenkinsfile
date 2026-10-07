@@ -11,7 +11,7 @@ pipeline {
     // ---- Workflow scheduling ----
     triggers {
         // cron('H 2 * * *')            // nightly retrain at ~02:00
-        pollSCM('H/1 * * * *')       // build within ~5 min of every push to GitHub
+        pollSCM('H/5 * * * *')       // build within ~5 min of every push to GitHub
     }
 
     environment {
